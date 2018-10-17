@@ -183,9 +183,8 @@ if __name__ == '__main__':
         print("Restarting program...")
         main()
     except KeyboardInterrupt:
-        print("keyboard interrupt occured...")
-        
-    escept Exception as e:
+        print("keyboard interrupt occured...")        
+    except Exception as e:
         print(e)
     finally:
         print("Closing program...")
