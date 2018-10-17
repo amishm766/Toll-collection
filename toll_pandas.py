@@ -54,7 +54,7 @@ class search_database(serial_device):
             print("The file u want to open doesn't exists")
             
     def search_in_column(self, queryColumn):
-        """ this function searches for the index of that word in column and returns that index
+        """ This method searches for the index of that word in column and returns that index
         """ 
         global data, foundIndex         
         data = pd.read_csv(filename)
@@ -63,8 +63,9 @@ class search_database(serial_device):
         return foundIndex[0]
 
     def search_in_rows(self,rows, word):
-        """ this function searches for the index of that word in row and returns that index
+        """ This method searches for the index of that word in row and returns that index
         """
+        
     def write_in_column(self, write_filename):
         data.to_csv(write_filename, index = False)
 
@@ -75,7 +76,7 @@ class customer(search_database):
         print("customer object has been created")
 
     def checkin_status(self,update_filename):
-        """ This method updates the checkin of customer to the status file
+        """ This method updates the checkins of customer to the status file
         """
         global checkStatus
         timeString = dt.datetime.now()
@@ -85,6 +86,7 @@ class customer(search_database):
         newCustomerBalance =  int(self.check_customer_balance())
         checkStatus.iloc[foundIndex, 1] = newCustomerBalance
         checkStatus.to_csv(update_filename, index = False)
+        
     def check_user_name(self):
         """ This method returns the customer's name
         """
@@ -113,6 +115,7 @@ class customer(search_database):
             customerBalance =  self.check_customer_balance()
             data.iloc[foundIndex[0],2] = customerBalance
             return customerBalance
+        
     def customer_frequency(self):
         """ This method returns the number of times the customer has visited
         """
