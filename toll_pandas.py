@@ -13,34 +13,63 @@
 import os
 import sys
 import time
+import glob
 import serial
+import logging
 import numpy as np
 import pandas as pd
 import datetime as dt
 import RPi.GPIO as GPIO
 import matplotlib.pyplot as plt
 
-filename = 'home/pi/test/change.csv'
-write_filename = '/home/pi/test/change.csv'
-update_filename =  '/home/pi/test/customer.csv'
+filename = '/home/pi/Toll-collection/change.csv'
+write_filename = '/home/pi/Toll-collection/change.csv'
+update_filename =  '/home/pi/Toll-collection/customer.csv'
 
 class serial_device():
     """ This class contains information about the serial device (here RFID)
     """
     global port, rcv
+    port_detect = glob.glob("/dev/ttyUSB*") or glob.glob("/dev/ttyAMA*")
+    print(len(port_detect),"Ports detected")
+    if (len(port_detect) != 0):				
+        print("Ports detected is/are:")
+        for i in range (0,len(port_detect)):
+            print(port_detect[i])
+        if (len(port_detect) == 1):
+            port = serial.Serial(port_detect[0],baudrate=9600)
+            print("connected to: {}".format(port_detect[0]))
+
+        else:
+            for i in range(0,len(port_detect)):
+                print("Enter",i,"to connect to:",port_detect[i])
+                y = int(input("Enter your choice of connection: "))
+                while (y >= len(port_detect)):
+                    print("Invalid choice")
+                    for i in range(0,len(port_detect)):
+                        print('Enter {} to select: {}'.format(i, detect_port[i]))
+                    y = int(input('Enter your choice of connection'))
+                port = serial.Serial(port_detect[y], baudrate=9600)
+                print('Connected to: {}'.format(port_detect[y]))
+                #return
+       
     if os.path.exists("/dev/ttyUSB0"):
         port = serial.Serial("/dev/ttyUSB0", baudrate = 9600, timeout = 2)    
-
+        #logger.debug('Port found')
+        
     def __init__(self, purpose, device):
         self.purpose = purpose
         self.device = device
         print("{} is initialized for {}".format(self.device, self.purpose))
 
+    def __str__(self):
+        print('rfid initialized')
+
     def serial_read(self):
         global rcv
         rcv = port.read(12)
         time.sleep(0.25)
-        return rcv
+        return str(rcv)
 
 class search_database(serial_device):
     """This class contains the methods to search the words or a entire column or a row
@@ -58,7 +87,9 @@ class search_database(serial_device):
         """ 
         global data, foundIndex         
         data = pd.read_csv(filename)
+        print(data)
         foundIndex = data[data[queryColumn] == word].index.tolist()
+        print(foundIndex)
         print("the word: '{}' has been found at position'{}'".format(word, foundIndex[0]))
         return foundIndex[0]
 
@@ -134,10 +165,7 @@ def sms(username,password,message):
     n=q.msgSentToday()
     q.logout()
 
-# Create objects for classes
-search = search_database(filename)
-ser = serial_device("toll","rfid")
-cus = customer()
+
 
 # Define main function
 def main():
@@ -150,6 +178,8 @@ def main():
     GPIO.setup(gatePin , GPIO.OUT)
     while True:
         word = ser.serial_read()
+        print(str(word)[2:-2])
+        word = str(word)[2:-1]
         if word:
             search.search_in_column('tag')
             print(np.array(data.iloc[:, 2]))
@@ -163,29 +193,52 @@ def main():
             GPIO.output(gatePin, GPIO.HIGH)
             print("Thanks for visiting us!! Happy journey")
             
-            #username = "9713490290"
-            #password = "amishm786@"
-            #message = "hello welcome to the toll"
-            #sms(username,password ,message)
+           
 
-            #checkStatus['visiting frequency'].plot(kind = 'hist')
-            #plt.xlabel('frequency') 
-            #plt.show()
-            #print(data)
+            checkStatus['visiting frequency'].plot(kind = 'hist')
+            plt.xlabel('frequency') 
+            plt.show()
+            print(data)
         else:
             print("please swipe card")
 
+def log_file():
+    logger = logging.getLogger('Toll_logger')
+    fh = logging.FileHandler('/home/pi/Toll-collection/Toll.log')
+    fh.setLevel(logging.DEBUG)
+    ff = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(ff)
+    logger.addHandler(fh)
+    logger.info('The program is starting...')
+    
+
 if __name__ == '__main__':
     try:
-        main()    
-    except FileNotFoundError:
+        global logger
+        logger = logging.getLogger('Toll_logger')      
+        fh = logging.FileHandler('Toll.log')
+        fh.setLevel(logging.DEBUG)
+        ff = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(ff)
+        logger.addHandler(fh)
+        logger.error('Starting program...')
+        search = search_database(filename)
+        ser = serial_device("toll","rfid")
+        cus = customer()
+        #ser.__str__()
+        #str(ser)
+        #log_file()
+        main() 
+    except FileNotFoundError as er:
         print("The file you wanted to open doesn't exist")
-        print("Restarting program...")
-        main()
+        logger.exception(er)
     except KeyboardInterrupt:
-        print("keyboard interrupt occured...")        
+        print("keyboard interrupt occured...")
+        logger.exception("keyboard interrupt occured...")
     except Exception as e:
         print(e)
+        logger.exception(e)
     finally:
         print("Closing program...")
         GPIO.cleanup()
+        logger.info('Exiting Program')
